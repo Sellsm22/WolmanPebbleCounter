@@ -18,9 +18,12 @@ import android.app.Dialog;
 import com.opencsv.CSVWriter;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +56,11 @@ public class MainActivity extends AppCompatActivity {
 
     Map<String, Integer> data = new LinkedHashMap<>();
 
-    String filePath = "/storage/emulated/0/Download/test.csv";
+    //String filepath = "/storage/emulated/0/Download/test.csv";
+
+    String home = System.getProperty("user.home");
+    String filename = "WolmanData" + new SimpleDateFormat("yyyyMMddHHmm").format(new Date());;
+    String filepath = home + "/Downloads/" + filename + ".csv";
 
     List<Double> customData = new ArrayList<Double>();
 
@@ -62,6 +69,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         //EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
+        Toast.makeText(this, filepath, Toast.LENGTH_SHORT).show();
 
         //setting up CSV stuff
         exportCSV = findViewById(R.id.ExportCSV);
@@ -156,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
              public void onClick(View view) {
                  Map<String, Integer> categoryAmounts = new LinkedHashMap<>();
                  //putDataInHash(categoryAmounts, data);
-                 writeDataToCSV(filePath, data, customData);
+                 writeDataToCSV(filepath, data, customData);
              }
          });
 
@@ -643,10 +652,15 @@ public class MainActivity extends AppCompatActivity {
             //Print success message
             Toast.makeText(MainActivity.this, "CSV file created", Toast.LENGTH_SHORT).show();
         }
+        catch (FileNotFoundException e)
+        {
+            Toast.makeText(MainActivity.this, "Tried to save file to " + filePath +
+                    " but location does not exist", Toast.LENGTH_LONG).show();
+        }
         catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             Toast.makeText(MainActivity.this, "Error occurred: CSV file not created", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
         }
     }
 
