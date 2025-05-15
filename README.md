@@ -5,7 +5,7 @@ To install app:
 1) Locate the Releases button on this github repository (should be listed on the right of the home "code" page)
 2) Download the latest APK
 3) You may need to enable the installation of apps from unknown sources on your device (this is due to this app not being an offical app on Goggle Play)
-  a) Open Settings
-  b) Go to "Security" or "Apps" > "Special access" > "Install unknown apps"
-  c) Toggle allow installation of unknown apps
-4) Find the location of the downloaded APK and click on it to install. 
+   - Open Settings
+   - Go to "Security" or "Apps" > "Special access" > "Install unknown apps"
+   - Toggle allow installation of unknown apps
+6) Find the location of the downloaded APK and click on it to install. 
