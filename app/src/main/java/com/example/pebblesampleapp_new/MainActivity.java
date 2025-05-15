@@ -1,7 +1,11 @@
 package com.example.pebblesampleapp_new;
 
 import android.app.AlertDialog;
+import android.content.ContentValues;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -21,6 +25,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -34,24 +40,6 @@ public class MainActivity extends AppCompatActivity {
     Button exportCSV, addFine, subFine, addSand, subSand, add2mm, sub2mm, add2_8mm, sub2_8mm, add4mm, sub4mm, add5_6mm, sub5_6mm, add8mm, sub8mm, add11mm, sub11mm, add16mm, sub16mm, add22_6mm, sub22_6mm, add32mm, sub32mm, add45mm, sub45mm, add64mm, sub64mm, add90mm, sub90mm, add128mm, sub128mm, add180mm, sub180mm, addCus, subCus;
 
     TextView amountFine, amountSand, amount2mm, amount2_8mm, amount4mm, amount5_6mm, amount8mm, amount11mm, amount16mm, amount22_6mm, amount32mm, amount45mm, amount64mm, amount90mm, amount128mm, amount180mm, amountCus, totalNumber, D16Text, D16Perc, D50Text, D50Perc, D84Text, D84Perc, D95Text, D95Perc;
-
-//    int fineAmt = 0;
-//    int sandAmt = 0;
-//    int twoAmt = 0;
-//    int two_8Amt = 0;
-//    int fourAmt = 0;
-//    int five_6Amt = 0;
-//    int eightAmt = 0;
-//    int elevenAmt = 0;
-//    int sixteenAmt = 0;
-//    int twentyTwo_6Amt = 0;
-//    int thirtyTwoAmt = 0;
-//    int fortyFiveAmt = 0;
-//    int sixtyFourAmt = 0;
-//    int ninetyAmt = 0;
-//    int oneHundredTwentyEightAmt = 0;
-//    int oneHundredEightyAmt = 0;
-//    int customAmt = 0;
     int total = 0;
 
     Map<String, Integer> data = new LinkedHashMap<>();
@@ -59,8 +47,8 @@ public class MainActivity extends AppCompatActivity {
     //String filepath = "/storage/emulated/0/Download/test.csv";
 
     String home = System.getProperty("user.home");
-    String filename = "WolmanData" + new SimpleDateFormat("yyyyMMddHHmm").format(new Date());;
-    String filepath = home + "/Downloads/" + filename + ".csv";
+    String filename = "WolmanData" + new SimpleDateFormat("yyyyMMddHHmm").format(new Date()) + ".csv";
+    //String filepath = home + "/Downloads/" + filename + ".csv";
 
     List<Double> customData = new ArrayList<Double>();
 
@@ -70,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
         //EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        Toast.makeText(this, filepath, Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, filepath, Toast.LENGTH_SHORT).show();
 
         //setting up CSV stuff
         exportCSV = findViewById(R.id.ExportCSV);
@@ -165,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
              public void onClick(View view) {
                  Map<String, Integer> categoryAmounts = new LinkedHashMap<>();
                  //putDataInHash(categoryAmounts, data);
-                 writeDataToCSV(filepath, data, customData);
+                 writeDataToCSV(filename, data, customData);
              }
          });
 
@@ -609,60 +597,117 @@ public class MainActivity extends AppCompatActivity {
 //        });
     }
 
-    public void writeDataToCSV(String filePath, Map<String, Integer> data, List<Double> customData)
-    {
+    public void writeDataToCSV(String filename, Map<String, Integer> data, List<Double> customData) {
+        String contentType = "text/csv";
 
-        // first create file object for file placed at location
-        // specified by filepath
-        File file = new File(filePath);
+
+        // Prepare MediaStore values
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
+        values.put(MediaStore.MediaColumns.MIME_TYPE, contentType);
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+
+        Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+
+        if (uri == null) {
+            Toast.makeText(MainActivity.this, "Failed to create file URI", Toast.LENGTH_LONG).show();
+            return;
+        }
 
         try {
-            // create FileWriter object with file as parameter
-            FileWriter outputfile = new FileWriter(file);
+            // Open output stream
+            OutputStream outputStream = getContentResolver().openOutputStream(uri);
+            if (outputStream == null) {
+                Toast.makeText(MainActivity.this, "Unable to open output stream", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-            // create CSVWriter object filewriter object as parameter
-            CSVWriter writer = new CSVWriter(outputfile);
+            //  Wrap OutputStream with CSVWriter
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream);
+            CSVWriter writer = new CSVWriter(outputStreamWriter);
 
-            // write data to file
-            for(Map.Entry<String, Integer> entry : data.entrySet())
-            {
+            //  Write data to CSV
+            for (Map.Entry<String, Integer> entry : data.entrySet()) {
                 String category = entry.getKey();
                 int amount = entry.getValue();
 
-                if(category.equals("Custom"))
-                {
-                    for(int i = 0; i < amount; i++)
-                    {
-                        writer.writeNext(new String[] {customData.get(i).toString()});
+                if (category.equals("Custom")) {
+                    for (int i = 0; i < amount && i < customData.size(); i++) {
+                        writer.writeNext(new String[]{customData.get(i).toString()});
+                    }
+                } else {
+                    for (int i = 0; i < amount; i++) {
+                        writer.writeNext(new String[]{category});
                     }
                 }
-                else
-                {
-                    for(int i = 0; i < amount; i++)
-                    {
-                        writer.writeNext(new String[] {category});
-                    }
-                }
-
-
             }
-            // closing writer connection
+
+            // Close writer
             writer.close();
 
-            //Print success message
-            Toast.makeText(MainActivity.this, "CSV file created", Toast.LENGTH_SHORT).show();
-        }
-        catch (FileNotFoundException e)
-        {
-            Toast.makeText(MainActivity.this, "Tried to save file to " + filePath +
-                    " but location does not exist", Toast.LENGTH_LONG).show();
-        }
-        catch (IOException e) {
+            Toast.makeText(MainActivity.this, "CSV saved to Downloads!", Toast.LENGTH_SHORT).show();
+
+        } catch (IOException e) {
             e.printStackTrace();
-            Toast.makeText(MainActivity.this, "Error occurred: CSV file not created", Toast.LENGTH_SHORT).show();
-            Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "Error writing CSV: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
+
+
+//    public void writeDataToCSV(String filePath, Map<String, Integer> data, List<Double> customData)
+//    {
+//
+//        // first create file object for file placed at location
+//        // specified by filepath
+//        File file = new File(filePath);
+//
+//        try {
+//            // create FileWriter object with file as parameter
+//            FileWriter outputfile = new FileWriter(file);
+//
+//            // create CSVWriter object filewriter object as parameter
+//            CSVWriter writer = new CSVWriter(outputfile);
+//
+//            // write data to file
+//            for(Map.Entry<String, Integer> entry : data.entrySet())
+//            {
+//                String category = entry.getKey();
+//                int amount = entry.getValue();
+//
+//                if(category.equals("Custom"))
+//                {
+//                    for(int i = 0; i < amount; i++)
+//                    {
+//                        writer.writeNext(new String[] {customData.get(i).toString()});
+//                    }
+//                }
+//                else
+//                {
+//                    for(int i = 0; i < amount; i++)
+//                    {
+//                        writer.writeNext(new String[] {category});
+//                    }
+//                }
+//
+//
+//            }
+//            // closing writer connection
+//            writer.close();
+//
+//            //Print success message
+//            Toast.makeText(MainActivity.this, "CSV file created", Toast.LENGTH_SHORT).show();
+//        }
+//        catch (FileNotFoundException e)
+//        {
+//            Toast.makeText(MainActivity.this, "Tried to save file to " + filePath +
+//                    " but location does not exist", Toast.LENGTH_LONG).show();
+//        }
+//        catch (IOException e) {
+//            e.printStackTrace();
+//            Toast.makeText(MainActivity.this, "Error occurred: CSV file not created", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
+//        }
+//    }
 
 
     private void displayPercentiles(Map<String, Integer> data, List<Double> customData)
